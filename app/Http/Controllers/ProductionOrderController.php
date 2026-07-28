@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProductionLine;
 use App\Models\ProductionOrder;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
@@ -35,7 +36,9 @@ class ProductionOrderController extends Controller
 
             ],
 
-            'orders' => ProductionOrder::latest()->take(5)->get()
+            'orders' => ProductionOrder::latest()->take(5)->get(),
+
+            'line' => ProductionLine::first(),
 
         ]);
     }
