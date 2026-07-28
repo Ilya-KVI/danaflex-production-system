@@ -11,7 +11,26 @@ const props = defineProps({
 
 
 
-function changeStatus(id, status){
+function formatDate(date){
+
+    if(!date){
+        return ''
+    }
+
+    return new Date(date).toLocaleString('ru-RU',{
+        day:'2-digit',
+        month:'2-digit',
+        year:'numeric',
+        hour:'2-digit',
+        minute:'2-digit'
+    })
+
+}
+
+
+
+
+function changeStatus(id,status){
 
     router.post(
         `/production-orders/${id}/status`,
@@ -19,7 +38,7 @@ function changeStatus(id, status){
             status: status
         },
         {
-            preserveScroll: true
+            preserveScroll:true
         }
     )
 
@@ -34,7 +53,7 @@ function startLine(id){
         `/production-lines/${id}/start`,
         {},
         {
-            preserveScroll: true
+            preserveScroll:true
         }
     )
 
@@ -50,7 +69,7 @@ function stopLine(id){
         `/production-lines/${id}/stop`,
         {},
         {
-            preserveScroll: true
+            preserveScroll:true
         }
     )
 
@@ -59,24 +78,20 @@ function stopLine(id){
 
 
 
-
 function deleteOrder(id){
 
     if(confirm('Удалить этот заказ?')){
 
-
         router.delete(
             `/production-orders/${id}`,
             {
-                preserveScroll: true
+                preserveScroll:true
             }
         )
-
 
     }
 
 }
-
 
 
 
@@ -91,12 +106,10 @@ function createOrder(){
 </script>
 
 
-
 <template>
 
 
 <div class="min-h-screen bg-slate-100 p-8">
-
 
 
 <!-- HEADER -->
@@ -131,8 +144,9 @@ py-3
 rounded-xl
 font-semibold
 shadow
-hover:bg-blue-700
 transition
+hover:bg-blue-700
+hover:scale-105
 "
 >
 
@@ -158,7 +172,6 @@ shadow
 ● Система активна
 
 </div>
-
 
 
 </div>
@@ -190,7 +203,6 @@ p-6
 </h2>
 
 
-
 <p class="mt-3 font-semibold">
 
 Температура:
@@ -198,10 +210,10 @@ p-6
 <span
 :class="{
 
-'text-green-600': line.temperature <= 40,
+'text-green-600': line.temperature <=40,
 
 'text-yellow-500':
-line.temperature > 40 &&
+line.temperature >40 &&
 line.temperature <=45,
 
 'text-red-600':
@@ -214,9 +226,7 @@ line.temperature >45
 
 </span>
 
-
 </p>
-
 
 
 
@@ -257,19 +267,24 @@ line.status === 'Остановлена'
 
 
 
-<div class="mt-5 flex gap-2">
+
+<div class="mt-5 flex justify-center">
 
 
 <button
 v-if="line.status !== 'Работает'"
 @click="startLine(line.id)"
 class="
+w-36
 px-4
 py-2
 bg-green-600
 text-white
 rounded-lg
+transition
 hover:bg-green-700
+hover:scale-105
+shadow
 "
 >
 
@@ -283,12 +298,16 @@ hover:bg-green-700
 v-if="line.status === 'Работает'"
 @click="stopLine(line.id)"
 class="
+w-36
 px-4
 py-2
 bg-red-600
 text-white
 rounded-lg
+transition
 hover:bg-red-700
+hover:scale-105
+shadow
 "
 >
 
@@ -300,9 +319,7 @@ hover:bg-red-700
 </div>
 
 
-
 </div>
-
 
 
 
@@ -341,13 +358,7 @@ width: line.load_percent + '%'
 ></div>
 
 
-
 </div>
-
-
-</div>
-
-
 
 
 </div>
@@ -355,6 +366,8 @@ width: line.load_percent + '%'
 
 </div>
 
+
+</div>
 
 
 
@@ -368,15 +381,16 @@ width: line.load_percent + '%'
 <div class="grid grid-cols-3 gap-6 mb-10">
 
 
-<div class="
+<div
+class="
 bg-white
 rounded-2xl
 shadow-md
 p-6
 border-l-4
 border-blue-500
-">
-
+"
+>
 
 <p class="text-gray-500">
 Всего заказов
@@ -389,21 +403,21 @@ border-blue-500
 
 </p>
 
-
 </div>
 
 
 
 
-<div class="
+<div
+class="
 bg-white
 rounded-2xl
 shadow-md
 p-6
 border-l-4
 border-yellow-500
-">
-
+"
+>
 
 <p class="text-gray-500">
 В производстве
@@ -416,21 +430,21 @@ border-yellow-500
 
 </p>
 
-
 </div>
 
 
 
 
-<div class="
+<div
+class="
 bg-white
 rounded-2xl
 shadow-md
 p-6
 border-l-4
 border-green-500
-">
-
+"
+>
 
 <p class="text-gray-500">
 Завершено
@@ -442,7 +456,6 @@ border-green-500
 {{ statistics.completed }}
 
 </p>
-
 
 </div>
 
@@ -458,37 +471,36 @@ border-green-500
 <!-- ORDERS -->
 
 
-<div class="
+<div
+class="
 bg-white
 rounded-2xl
 shadow-md
 overflow-hidden
-">
+"
+>
 
 
 <div class="p-6 border-b">
 
-
 <h2 class="text-2xl font-bold">
-
 📦 Последние производственные заказы
-
 </h2>
-
 
 </div>
 
 
 
-
-<table class="w-full">
+<table
+v-if="orders.length"
+class="w-full"
+>
 
 
 <thead class="bg-slate-50">
 
 
 <tr>
-
 
 <th class="p-4 text-left">
 Клиент
@@ -507,6 +519,11 @@ overflow-hidden
 
 <th class="p-4 text-left">
 Статус
+</th>
+
+
+<th class="p-4 text-left">
+Дата
 </th>
 
 
@@ -532,30 +549,25 @@ v-for="order in orders"
 class="
 border-b
 hover:bg-slate-50
+transition
 "
 >
 
 
 <td class="p-4 font-semibold">
-
 {{ order.customer_name }}
-
 </td>
 
 
 
 <td class="p-4">
-
 {{ order.material }}
-
 </td>
 
 
 
 <td class="p-4">
-
 {{ order.quantity }}
-
 </td>
 
 
@@ -574,18 +586,14 @@ font-semibold
 "
 :class="{
 
-
 'bg-gray-500':
-order.status === 'Новый',
-
+order.status==='Новый',
 
 'bg-blue-500':
-order.status === 'В производстве',
-
+order.status==='В производстве',
 
 'bg-green-500':
-order.status === 'Готово'
-
+order.status==='Готово'
 
 }"
 >
@@ -595,92 +603,97 @@ order.status === 'Готово'
 </span>
 
 
-
 </td>
 
 
+
+
+<td class="p-4 text-gray-500">
+
+{{ formatDate(order.created_at) }}
+
+</td>
 
 
 
 
 <td class="p-4">
 
-    <div class="flex flex-col gap-2 items-center">
+
+<div class="flex flex-col gap-2 items-center">
 
 
-        <button
-            v-if="order.status === 'Новый'"
-            @click="changeStatus(order.id,'В производстве')"
-            class="
-            w-36
-            px-4
-            py-2
-            bg-blue-600
-            text-white
-            rounded-lg
-            transition
-            hover:bg-blue-700
-            hover:scale-105
-            shadow
-            "
-        >
+<button
+v-if="order.status==='Новый'"
+@click="changeStatus(order.id,'В производстве')"
+class="
+w-36
+px-4
+py-2
+bg-blue-600
+text-white
+rounded-lg
+transition
+hover:bg-blue-700
+hover:scale-105
+shadow
+"
+>
 
-            ▶ Запустить
+▶ Запустить
 
-        </button>
-
-
-
-        <button
-            v-if="order.status === 'В производстве'"
-            @click="changeStatus(order.id,'Готово')"
-            class="
-            w-36
-            px-4
-            py-2
-            bg-green-600
-            text-white
-            rounded-lg
-            transition
-            hover:bg-green-700
-            hover:scale-105
-            shadow
-            "
-        >
-
-            ✓ Завершить
-
-        </button>
+</button>
 
 
 
+<button
+v-if="order.status==='В производстве'"
+@click="changeStatus(order.id,'Готово')"
+class="
+w-36
+px-4
+py-2
+bg-green-600
+text-white
+rounded-lg
+transition
+hover:bg-green-700
+hover:scale-105
+shadow
+"
+>
 
-        <button
-            @click="deleteOrder(order.id)"
-            class="
-            w-36
-            px-4
-            py-2
-            bg-red-600
-            text-white
-            rounded-lg
-            transition
-            hover:bg-red-700
-            hover:scale-105
-            shadow
-            "
-        >
+✓ Завершить
 
-            🗑 Удалить
-
-        </button>
+</button>
 
 
-    </div>
+
+<button
+@click="deleteOrder(order.id)"
+class="
+w-36
+px-4
+py-2
+bg-red-600
+text-white
+rounded-lg
+transition
+hover:bg-red-700
+hover:scale-105
+shadow
+"
+>
+
+🗑 Удалить
+
+</button>
+
+
+</div>
 
 
 </td>
-
 
 
 
@@ -693,8 +706,24 @@ order.status === 'Готово'
 </table>
 
 
+
+
+<div
+v-else
+class="
+p-10
+text-center
+text-gray-500
+"
+>
+
+📦 Заказов пока нет
+
 </div>
 
+
+
+</div>
 
 
 

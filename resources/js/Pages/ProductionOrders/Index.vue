@@ -5,13 +5,17 @@ import { ref, computed } from 'vue'
 
 
 const props = defineProps({
+
     orders: Array
+
 })
+
 
 
 const search = ref('')
 
 const selectedStatus = ref('Все')
+
 
 
 const statuses = [
@@ -23,7 +27,10 @@ const statuses = [
 
 
 
+
+
 const filteredOrders = computed(() => {
+
 
     return props.orders.filter(order => {
 
@@ -31,11 +38,15 @@ const filteredOrders = computed(() => {
         const searchText = search.value.toLowerCase()
 
 
+
         const matchesSearch =
+
             order.customer_name
                 .toLowerCase()
                 .includes(searchText)
+
             ||
+
             order.material
                 .toLowerCase()
                 .includes(searchText)
@@ -43,8 +54,11 @@ const filteredOrders = computed(() => {
 
 
         const matchesStatus =
+
             selectedStatus.value === 'Все'
+
             ||
+
             order.status === selectedStatus.value
 
 
@@ -54,320 +68,552 @@ const filteredOrders = computed(() => {
 
     })
 
+
 })
+
+
+
+
+
+
+function formatDate(date){
+
+
+    if(!date){
+
+        return ''
+
+    }
+
+
+    return new Date(date).toLocaleString(
+        'ru-RU',
+        {
+
+            day:'2-digit',
+
+            month:'2-digit',
+
+            year:'numeric',
+
+            hour:'2-digit',
+
+            minute:'2-digit'
+
+        }
+    )
+
+
+}
+
+
+
 
 
 
 function deleteOrder(id){
 
+
     if(confirm('Удалить этот заказ?')){
 
+
         router.delete(
+
             `/production-orders/${id}`,
+
             {
-                preserveScroll: true
+
+                preserveScroll:true
+
             }
+
         )
+
 
     }
 
+
 }
+
+
+
+
 
 
 
 function editOrder(id){
 
+
     router.visit(
+
         `/production-orders/${id}/edit`
+
     )
 
+
 }
+
+
+
+
+
+
+function showOrder(id){
+
+
+    router.visit(
+
+        `/production-orders/${id}`
+
+    )
+
+
+}
+
 
 
 </script>
 
 
 
+
+
 <template>
+
 
 <div class="min-h-screen bg-slate-100 p-8">
 
 
-    <h1 class="text-4xl font-bold mb-8">
-        📦 Все производственные заказы
-    </h1>
 
+<h1 class="text-4xl font-bold text-slate-800 mb-8">
 
+📦 Все производственные заказы
 
-    <!-- SEARCH -->
+</h1>
 
-    <div class="bg-white rounded-2xl shadow p-6 mb-8">
 
 
-        <input
-            v-model="search"
-            placeholder="🔎 Поиск клиента или материала..."
-            class="
-            border
-            rounded-xl
-            px-4
-            py-3
-            w-full
-            "
-        />
 
 
-    </div>
 
+<!-- SEARCH -->
 
 
+<div
+class="
+bg-white
+rounded-2xl
+shadow-md
+p-6
+mb-6
+"
+>
 
-    <!-- FILTERS -->
 
+<input
 
-    <div class="flex gap-4 mb-8">
+v-model="search"
 
+placeholder="🔎 Поиск клиента или материала..."
 
-        <button
-            v-for="status in statuses"
-            :key="status"
-            @click="selectedStatus = status"
-            class="
-            px-5
-            py-3
-            rounded-xl
-            font-semibold
-            transition
-            "
-            :class="{
+class="
+w-full
+border
+rounded-xl
+px-4
+py-3
+focus:outline-none
+focus:ring-2
+focus:ring-blue-500
+"
 
-                'bg-blue-600 text-white shadow':
-                selectedStatus === status,
+/>
 
 
-                'bg-white text-gray-700 hover:bg-gray-100':
-                selectedStatus !== status
+</div>
 
-            }"
-        >
 
-            {{ status }}
 
-        </button>
 
 
-    </div>
 
 
 
+<!-- FILTERS -->
 
 
-    <!-- TABLE -->
+<div class="flex gap-4 mb-8">
 
 
-    <div class="bg-white rounded-2xl shadow overflow-hidden">
+<button
 
+v-for="status in statuses"
 
-        <table class="w-full">
+:key="status"
 
+@click="selectedStatus = status"
 
-            <thead class="bg-slate-50">
+class="
+px-5
+py-3
+rounded-xl
+font-semibold
+transition
+"
 
+:class="{
 
-            <tr>
 
-                <th class="p-4 text-left">
-                    Клиент
-                </th>
+'bg-blue-600 text-white shadow':
 
+selectedStatus === status,
 
-                <th class="p-4 text-left">
-                    Материал
-                </th>
 
 
-                <th class="p-4 text-left">
-                    Количество
-                </th>
+'bg-white hover:bg-gray-100':
 
+selectedStatus !== status
 
-                <th class="p-4 text-left">
-                    Статус
-                </th>
 
 
-                <th class="p-4 text-left">
-                    Создан
-                </th>
+}"
 
+>
 
-                <th class="p-4 text-left">
-                    Действия
-                </th>
+{{ status }}
 
 
-            </tr>
+</button>
 
 
-            </thead>
+</div>
 
 
 
-            <tbody>
 
 
-            <tr
-                v-for="order in filteredOrders"
-                :key="order.id"
-                class="
-                border-b
-                hover:bg-slate-50
-                transition
-                "
-            >
 
 
-                <td class="p-4 font-semibold">
-                    {{ order.customer_name }}
-                </td>
 
+<!-- TABLE -->
 
 
-                <td class="p-4">
-                    {{ order.material }}
-                </td>
+<div
+class="
+bg-white
+rounded-2xl
+shadow-md
+overflow-hidden
+"
+>
 
 
 
-                <td class="p-4">
-                    {{ order.quantity }}
-                </td>
+<table
+v-if="filteredOrders.length"
+class="w-full"
+>
 
 
+<thead class="bg-slate-50">
 
 
-                <td class="p-4">
+<tr>
 
 
-                    <span
-                        class="
-                        px-4
-                        py-2
-                        rounded-full
-                        text-white
-                        text-sm
-                        font-semibold
-                        "
-                        :class="{
+<th class="p-4 text-left">
+Клиент
+</th>
 
-                        'bg-gray-500':
-                        order.status === 'Новый',
 
-                        'bg-blue-500':
-                        order.status === 'В производстве',
+<th class="p-4 text-left">
+Материал
+</th>
 
-                        'bg-green-500':
-                        order.status === 'Готово'
 
-                        }"
-                    >
+<th class="p-4 text-left">
+Количество
+</th>
 
-                        {{ order.status }}
 
-                    </span>
+<th class="p-4 text-left">
+Статус
+</th>
 
 
-                </td>
+<th class="p-4 text-left">
+Создан
+</th>
 
 
+<th class="p-4 text-center">
+Действия
+</th>
 
 
-                <td class="p-4 text-gray-500">
+</tr>
 
-                    {{ order.created_at }}
 
-                </td>
+</thead>
 
 
 
 
-                <td class="p-4">
 
+<tbody>
 
-                    <div class="flex gap-2">
 
+<tr
 
-                    <button
-                    @click="router.visit(`/production-orders/${order.id}`)"
-                    class="
-                    px-4
-                    py-2
-                    bg-blue-600
-                    text-white
-                    rounded-lg
-                    hover:bg-blue-700
-                    transition
-                    "
-                    >
+v-for="order in filteredOrders"
 
-                    👁 Просмотр
+:key="order.id"
 
-                    </button>
+class="
+border-b
+hover:bg-slate-50
+transition
+"
 
-                        <button
-                            @click="editOrder(order.id)"
-                            class="
-                            px-4
-                            py-2
-                            bg-yellow-500
-                            text-white
-                            rounded-lg
-                            hover:bg-yellow-600
-                            transition
-                            "
-                        >
+>
 
-                            ✏️ Изменить
 
-                        </button>
 
+<td class="p-4 font-semibold">
 
+{{ order.customer_name }}
 
-                        <button
-                            @click="deleteOrder(order.id)"
-                            class="
-                            px-4
-                            py-2
-                            bg-red-600
-                            text-white
-                            rounded-lg
-                            hover:bg-red-700
-                            transition
-                            "
-                        >
+</td>
 
-                            🗑 Удалить
 
-                        </button>
 
 
-                    </div>
+<td class="p-4">
 
+{{ order.material }}
 
-                </td>
+</td>
 
 
 
-            </tr>
 
 
-            </tbody>
+<td class="p-4">
 
+{{ order.quantity }}
 
-        </table>
+</td>
 
 
-    </div>
+
+
+
+
+<td class="p-4">
+
+
+<span
+
+class="
+px-4
+py-2
+rounded-full
+text-white
+font-semibold
+"
+
+:class="{
+
+
+'bg-gray-500':
+
+order.status === 'Новый',
+
+
+
+'bg-blue-500':
+
+order.status === 'В производстве',
+
+
+
+'bg-green-500':
+
+order.status === 'Готово'
+
+
+}"
+
+>
+
+{{ order.status }}
+
+</span>
+
+
+</td>
+
+
+
+
+
+
+
+<td class="p-4 text-gray-500">
+
+{{ formatDate(order.created_at) }}
+
+</td>
+
+
+
+
+
+
+<td class="p-4">
+
+
+<div
+class="
+flex
+flex-col
+gap-2
+items-center
+"
+>
+
+
+
+
+<button
+
+@click="showOrder(order.id)"
+
+class="
+w-36
+px-4
+py-2
+bg-blue-600
+text-white
+rounded-lg
+shadow
+transition
+hover:bg-blue-700
+hover:scale-105
+"
+
+>
+
+👁 Просмотр
+
+</button>
+
+
+
+
+
+
+
+<button
+
+@click="editOrder(order.id)"
+
+class="
+w-36
+px-4
+py-2
+bg-yellow-500
+text-white
+rounded-lg
+shadow
+transition
+hover:bg-yellow-600
+hover:scale-105
+"
+
+>
+
+✏️ Изменить
+
+</button>
+
+
+
+
+
+
+
+<button
+
+@click="deleteOrder(order.id)"
+
+class="
+w-36
+px-4
+py-2
+bg-red-600
+text-white
+rounded-lg
+shadow
+transition
+hover:bg-red-700
+hover:scale-105
+"
+
+>
+
+🗑 Удалить
+
+</button>
+
+
+
+
+</div>
+
+
+
+</td>
+
+
+
+
+
+</tr>
+
+
+
+</tbody>
+
+
+</table>
+
+
+
+
+
+
+
+<div
+v-else
+class="
+p-12
+text-center
+text-gray-500
+"
+>
+
+📦 Заказов не найдено
+
+
+</div>
+
+
+
+
+
+</div>
+
 
 
 

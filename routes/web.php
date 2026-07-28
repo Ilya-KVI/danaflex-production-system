@@ -27,6 +27,7 @@ Route::get('/dashboard', [
 
 
 
+
 // Production Orders
 
 
@@ -51,11 +52,6 @@ Route::post('/production-orders', [
 
 
 
-Route::get('/production-orders/{id}', [
-    ProductionOrderController::class,
-    'show'
-])->name('production-orders.show');
-
 
 // Edit
 
@@ -73,6 +69,16 @@ Route::put('/production-orders/{id}', [
     ProductionOrderController::class,
     'update'
 ])->name('production-orders.update');
+
+
+
+
+// Show
+
+Route::get('/production-orders/{id}', [
+    ProductionOrderController::class,
+    'show'
+])->name('production-orders.show');
 
 
 
