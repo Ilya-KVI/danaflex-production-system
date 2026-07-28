@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProductionLineController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ProductionOrderController;
@@ -27,4 +28,14 @@ Route::get('/dashboard', [
 Route::post('/production-orders/{id}/status', [
     ProductionOrderController::class,
     'updateStatus'
+]);
+
+Route::post('/production-lines/{id}/start', [
+    ProductionLineController::class,
+    'start'
+]);
+
+Route::post('/production-lines/{id}/stop', [
+    ProductionLineController::class,
+    'stop'
 ]);

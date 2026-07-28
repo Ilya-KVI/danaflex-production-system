@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ProductionLine;
+use Illuminate\Http\Request;
+
+class ProductionLineController extends Controller
+{
+    public function start($id)
+    {
+        $line = ProductionLine::findOrFail($id);
+
+        $line->update([
+            'status' => 'Работает',
+            'temperature' => rand(38, 48),
+            'load_percent' => rand(65, 95),
+        ]);
+
+        return back();
+    }
+
+    public function stop($id)
+    {
+        $line = ProductionLine::findOrFail($id);
+
+        $line->update([
+            'status' => 'Остановлена',
+            'temperature' => 25,
+            'load_percent' => 0,
+        ]);
+
+        return back();
+    }
+}
