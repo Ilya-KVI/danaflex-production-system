@@ -24,7 +24,9 @@ class DatabaseSeeder extends Seeder
 
             ProductionOrderSeeder::class,
 
-            ProductionLineSeeder::class
+            ProductionLineSeeder::class,
+
+            ProductionLogSeeder::class,
 
         ]);
     }

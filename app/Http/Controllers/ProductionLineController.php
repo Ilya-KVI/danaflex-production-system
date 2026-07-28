@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProductionLog;
 use App\Models\ProductionLine;
 use Illuminate\Http\Request;
 
@@ -17,6 +18,12 @@ class ProductionLineController extends Controller
             'load_percent' => rand(65, 95),
         ]);
 
+
+        ProductionLog::create([
+            'message' => "🚀 {$line->name} запущена"
+        ]);
+
+
         return back();
     }
 
@@ -29,6 +36,12 @@ class ProductionLineController extends Controller
             'temperature' => 25,
             'load_percent' => 0,
         ]);
+
+
+        ProductionLog::create([
+            'message' => "🛑 {$line->name} остановлена"
+        ]);
+
 
         return back();
     }
