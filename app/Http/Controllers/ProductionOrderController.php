@@ -38,7 +38,13 @@ class ProductionOrderController extends Controller
 
             'orders' => ProductionOrder::latest()->take(5)->get(),
 
-            'line' => ProductionLine::first(),
+            'line' => ProductionLine::first() ?? [
+                'name' => 'Линия отсутствует',
+                'temperature' => 0,
+                'load_percent' => 0,
+                'material' => '-',
+                'status' => 'Остановлена'
+            ],
 
         ]);
     }

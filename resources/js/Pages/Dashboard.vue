@@ -149,7 +149,7 @@ function changeStatus(id, status){
 
 
                     <b>
-                        75%
+                    {{ line.load_percent }}%
                     </b>
 
                 </div>
@@ -166,7 +166,9 @@ function changeStatus(id, status){
                         h-3
                         rounded-full
                         "
-                        style="width:75%"
+                        :style="{
+                            width: line.load_percent + '%'
+                        }"
                     ></div>
 
 
@@ -192,12 +194,12 @@ function changeStatus(id, status){
 
 
             <p class="text-3xl font-bold mt-5">
-                PE-500
+                {{ line.material }}
             </p>
 
 
             <p class="text-gray-500 mt-2">
-                Полиэтиленовая пленка
+                Текущий материал производства
             </p>
 
 
