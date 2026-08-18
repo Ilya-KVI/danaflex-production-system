@@ -10,7 +10,7 @@ const props = defineProps({
 })
 
 const search = ref('')
-const selectedStatus = ref('Все')
+const activeStatus = ref('Все')
 
 const statuses = [
     'Все',
@@ -19,37 +19,90 @@ const statuses = [
     'Готово',
 ]
 
+const total = computed(() => props.orders.length)
+
+const inProduction = computed(() => {
+    return props.orders.filter(
+        order => order.status === 'В производстве'
+    ).length
+})
+
+const completed = computed(() => {
+    return props.orders.filter(
+        order => order.status === 'Готово'
+    ).length
+})
+
+const queued = computed(() => {
+    return props.orders.filter(
+        order => order.status === 'Новый'
+    ).length
+})
+
 const filteredOrders = computed(() => {
-    const searchText = search.value.trim().toLowerCase()
+    const query = search.value.trim().toLowerCase()
 
     return props.orders.filter(order => {
-        const matchesSearch =
-            !searchText ||
-            order.customer_name?.toLowerCase().includes(searchText) ||
-            order.material?.toLowerCase().includes(searchText)
-
         const matchesStatus =
-            selectedStatus.value === 'Все' ||
-            order.status === selectedStatus.value
+            activeStatus.value === 'Все' ||
+            order.status === activeStatus.value
 
-        return matchesSearch && matchesStatus
+        const matchesSearch =
+            !query ||
+            String(order.customer_name || '')
+                .toLowerCase()
+                .includes(query) ||
+            String(order.material || '')
+                .toLowerCase()
+                .includes(query) ||
+            String(order.id || '')
+                .toLowerCase()
+                .includes(query)
+
+        return matchesStatus && matchesSearch
     })
 })
 
-const completedCount = computed(() =>
-    props.orders.filter(order => order.status === 'Готово').length
-)
+function goDashboard() {
+    router.visit('/dashboard')
+}
 
-const productionCount = computed(() =>
-    props.orders.filter(order => order.status === 'В производстве').length
-)
+function createOrder() {
+    router.visit('/production-orders/create')
+}
 
-function formatDate(date) {
-    if (!date) {
+function openOrder(id) {
+    router.visit(`/production-orders/${id}`)
+}
+
+function editOrder(id) {
+    router.visit(`/production-orders/${id}/edit`)
+}
+
+function deleteOrder(order) {
+    const ok = window.confirm(
+        `Удалить заказ #${order.id} — ${order.customer_name}?`
+    )
+
+    if (!ok) {
+        return
+    }
+
+    router.delete(`/production-orders/${order.id}`, {
+        preserveScroll: true,
+    })
+}
+
+function formatNumber(value) {
+    return new Intl.NumberFormat('ru-RU').format(Number(value || 0))
+}
+
+function formatDate(value) {
+    if (!value) {
         return '—'
     }
 
-    return new Date(date).toLocaleString('ru-RU', {
+    return new Date(value).toLocaleString('ru-RU', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -58,60 +111,60 @@ function formatDate(date) {
     })
 }
 
-function formatQuantity(quantity) {
-    return new Intl.NumberFormat('ru-RU').format(quantity ?? 0)
-}
-
-function deleteOrder(id) {
-    if (!confirm('Удалить этот заказ?')) {
-        return
-    }
-
-    router.delete(`/production-orders/${id}`, {
-        preserveScroll: true,
-    })
-}
-
-function editOrder(id) {
-    router.visit(`/production-orders/${id}/edit`)
-}
-
-function showOrder(id) {
-    router.visit(`/production-orders/${id}`)
-}
-
-function backToDashboard() {
-    router.visit('/dashboard')
-}
-
-function createOrder() {
-    router.visit('/production-orders/create')
-}
-
-function getStatusClasses(status) {
+function statusClasses(status) {
     if (status === 'В производстве') {
-        return 'bg-blue-50 text-blue-700 ring-blue-600/20'
+        return 'border-blue-200 bg-blue-50 text-blue-700'
     }
 
     if (status === 'Готово') {
-        return 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+        return 'border-emerald-200 bg-emerald-50 text-emerald-700'
     }
 
-    return 'bg-slate-100 text-slate-700 ring-slate-600/10'
+    return 'border-amber-200 bg-amber-50 text-amber-700'
+}
+
+function statusDot(status) {
+    if (status === 'В производстве') {
+        return 'bg-blue-500'
+    }
+
+    if (status === 'Готово') {
+        return 'bg-emerald-500'
+    }
+
+    return 'bg-amber-500'
 }
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 text-slate-900">
+    <!-- DANAFLEX ORDERS OPERATOR V3 -->
+    <div
+        class="
+            min-h-screen
+            bg-gradient-to-b
+            from-blue-100
+            via-sky-50
+            to-indigo-100
+            text-slate-900
+        "
+    >
 
         <!-- HEADER -->
 
-        <header class="border-b border-slate-200 bg-white">
+        <header
+            class="
+                border-b
+                border-slate-200/80
+                bg-white/95
+                shadow-sm
+                backdrop-blur
+            "
+        >
             <div
                 class="
                     mx-auto
                     flex
-                    max-w-[1600px]
+                    max-w-[1500px]
                     items-center
                     justify-between
                     gap-4
@@ -121,42 +174,63 @@ function getStatusClasses(status) {
                 "
             >
                 <button
-                    @click="backToDashboard"
+                    @click="goDashboard"
                     class="flex items-center gap-3 text-left"
                 >
                     <div
                         class="
                             flex
-                            h-10
-                            w-10
+                            h-11
+                            w-11
                             items-center
                             justify-center
                             rounded-xl
-                            bg-slate-900
-                            text-white
+                            bg-slate-950
+                            text-cyan-300
+                            shadow-sm
                         "
                     >
                         <svg
                             viewBox="0 0 24 24"
                             fill="none"
-                            class="h-5 w-5"
+                            class="h-6 w-6"
                             stroke="currentColor"
                             stroke-width="1.8"
                         >
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                d="M3 21h18M5 21V9l5 3V9l5 3V5h4v16"
+                                d="M3 21h18M5 21V9l5 3V9l5 3V5h4v16M8 17h1m3 0h1m3 0h1"
                             />
                         </svg>
                     </div>
 
                     <div>
-                        <p class="font-bold text-slate-900">
-                            Danaflex
-                        </p>
+                        <div class="flex items-center gap-2">
+                            <p class="font-bold tracking-tight text-slate-950">
+                                Danaflex
+                            </p>
 
-                        <p class="text-xs text-slate-500">
+                            <span
+                                class="
+                                    hidden
+                                    rounded-md
+                                    bg-blue-50
+                                    px-2
+                                    py-1
+                                    text-[10px]
+                                    font-bold
+                                    uppercase
+                                    tracking-[0.16em]
+                                    text-blue-600
+                                    sm:inline-flex
+                                "
+                            >
+                                Operator
+                            </span>
+                        </div>
+
+                        <p class="mt-0.5 text-xs text-slate-500">
                             Production System
                         </p>
                     </div>
@@ -168,145 +242,182 @@ function getStatusClasses(status) {
                         inline-flex
                         items-center
                         gap-2
-                        rounded-lg
-                        bg-slate-900
+                        rounded-xl
+                        bg-slate-950
                         px-4
                         py-2.5
                         text-sm
-                        font-semibold
+                        font-bold
                         text-white
-                        shadow-sm
+                        shadow-lg
+                        shadow-slate-900/10
                         transition
                         hover:bg-slate-800
                     "
                 >
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        class="h-4 w-4"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            d="M12 5v14M5 12h14"
-                        />
-                    </svg>
-
+                    <span class="text-lg leading-none">+</span>
                     Новый заказ
                 </button>
             </div>
         </header>
 
 
-        <main class="mx-auto max-w-[1600px] px-6 py-8 lg:px-10">
+        <main class="mx-auto max-w-[1500px] px-6 py-8 lg:px-10">
 
-            <!-- TITLE -->
+            <!-- HEADING -->
 
-            <div
-                class="
-                    mb-8
-                    flex
-                    flex-col
-                    justify-between
-                    gap-5
-                    lg:flex-row
-                    lg:items-end
-                "
-            >
-                <div>
-                    <button
-                        @click="backToDashboard"
+            <section class="mb-7">
+                <button
+                    @click="goDashboard"
+                    class="
+                        mb-4
+                        inline-flex
+                        items-center
+                        gap-2
+                        text-sm
+                        font-semibold
+                        text-slate-500
+                        transition
+                        hover:text-blue-700
+                    "
+                >
+                    ← Вернуться в центр управления
+                </button>
+
+                <p
+                    class="
+                        text-xs
+                        font-bold
+                        uppercase
+                        tracking-[0.2em]
+                        text-blue-600
+                    "
+                >
+                    Производственный журнал
+                </p>
+
+                <div
+                    class="
+                        mt-3
+                        flex
+                        flex-col
+                        justify-between
+                        gap-4
+                        lg:flex-row
+                        lg:items-end
+                    "
+                >
+                    <div>
+                        <h1
+                            class="
+                                text-3xl
+                                font-bold
+                                tracking-tight
+                                text-slate-950
+                                sm:text-4xl
+                            "
+                        >
+                            Производственные заказы
+                        </h1>
+
+                        <p
+                            class="
+                                mt-2
+                                max-w-2xl
+                                text-sm
+                                leading-6
+                                text-slate-600
+                            "
+                        >
+                            Поиск, контроль статусов и оперативное управление
+                            текущим производственным планом.
+                        </p>
+                    </div>
+
+                    <div
                         class="
-                            mb-4
                             inline-flex
+                            self-start
                             items-center
                             gap-2
-                            text-sm
-                            font-medium
-                            text-slate-500
-                            transition
-                            hover:text-slate-900
-                        "
-                    >
-                        ← Вернуться в центр управления
-                    </button>
-
-                    <p
-                        class="
-                            mb-2
+                            rounded-xl
+                            border
+                            border-emerald-200
+                            bg-emerald-50
+                            px-4
+                            py-2.5
                             text-xs
-                            font-semibold
-                            uppercase
-                            tracking-[0.18em]
-                            text-blue-600
-                        "
-                    >
-                        Производственный журнал
-                    </p>
-
-                    <h1
-                        class="
-                            text-3xl
                             font-bold
-                            tracking-tight
-                            text-slate-950
-                            sm:text-4xl
+                            text-emerald-700
+                            shadow-sm
+                            lg:self-auto
                         "
                     >
-                        Производственные заказы
-                    </h1>
-
-                    <p
-                        class="
-                            mt-2
-                            max-w-2xl
-                            text-sm
-                            leading-6
-                            text-slate-500
-                        "
-                    >
-                        Поиск, фильтрация и управление текущими
-                        производственными заказами.
-                    </p>
+                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                        Журнал доступен оператору
+                    </div>
                 </div>
-            </div>
+            </section>
 
 
-            <!-- MINI KPI -->
+            <!-- KPI -->
 
-            <section
-                class="
-                    mb-6
-                    grid
-                    grid-cols-1
-                    gap-4
-                    sm:grid-cols-3
-                "
-            >
+            <section class="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
                 <div
                     class="
                         rounded-2xl
                         border
-                        border-slate-200
-                        bg-white
+                        border-blue-300
+                        bg-gradient-to-br
+                        from-blue-100
+                        via-blue-50
+                        to-cyan-100
                         p-5
-                        shadow-sm
+                        shadow-md
+                        shadow-blue-900/5
                     "
                 >
-                    <p class="text-sm font-medium text-slate-500">
+                    <p class="text-sm font-semibold text-slate-600">
                         Всего заказов
                     </p>
 
-                    <p
-                        class="
-                            mt-2
-                            text-3xl
-                            font-bold
-                            text-slate-950
-                        "
-                    >
-                        {{ orders.length }}
+                    <div class="mt-3 flex items-end justify-between gap-4">
+                        <p class="text-3xl font-bold text-slate-950">
+                            {{ total }}
+                        </p>
+
+                        <div
+                            class="
+                                flex
+                                h-10
+                                w-10
+                                items-center
+                                justify-center
+                                rounded-xl
+                                border
+                                border-blue-200
+                                bg-white/70
+                                text-blue-700
+                            "
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                class="h-5 w-5"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M6 4h12v16H6zM9 8h6M9 12h6M9 16h4"
+                                />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <p class="mt-2 text-xs text-blue-700/70">
+                        В производственном журнале
                     </p>
                 </div>
 
@@ -314,25 +425,53 @@ function getStatusClasses(status) {
                     class="
                         rounded-2xl
                         border
-                        border-slate-200
-                        bg-white
+                        border-amber-300
+                        bg-gradient-to-br
+                        from-amber-100
+                        via-amber-50
+                        to-orange-100
                         p-5
-                        shadow-sm
+                        shadow-md
+                        shadow-amber-900/5
                     "
                 >
-                    <p class="text-sm font-medium text-slate-500">
+                    <p class="text-sm font-semibold text-slate-600">
+                        Ожидают
+                    </p>
+
+                    <p class="mt-3 text-3xl font-bold text-amber-600">
+                        {{ queued }}
+                    </p>
+
+                    <p class="mt-2 text-xs text-amber-700/70">
+                        Ещё не запущены
+                    </p>
+                </div>
+
+                <div
+                    class="
+                        rounded-2xl
+                        border
+                        border-blue-300
+                        bg-gradient-to-br
+                        from-sky-100
+                        via-blue-50
+                        to-indigo-100
+                        p-5
+                        shadow-md
+                        shadow-blue-900/5
+                    "
+                >
+                    <p class="text-sm font-semibold text-slate-600">
                         В производстве
                     </p>
 
-                    <p
-                        class="
-                            mt-2
-                            text-3xl
-                            font-bold
-                            text-blue-600
-                        "
-                    >
-                        {{ productionCount }}
+                    <p class="mt-3 text-3xl font-bold text-blue-600">
+                        {{ inProduction }}
+                    </p>
+
+                    <p class="mt-2 text-xs text-blue-700/70">
+                        Активные задания
                     </p>
                 </div>
 
@@ -340,120 +479,180 @@ function getStatusClasses(status) {
                     class="
                         rounded-2xl
                         border
-                        border-slate-200
-                        bg-white
+                        border-emerald-300
+                        bg-gradient-to-br
+                        from-emerald-100
+                        via-emerald-50
+                        to-teal-100
                         p-5
-                        shadow-sm
+                        shadow-md
+                        shadow-emerald-900/5
                     "
                 >
-                    <p class="text-sm font-medium text-slate-500">
-                        Выполнено
+                    <p class="text-sm font-semibold text-slate-600">
+                        Завершено
                     </p>
 
-                    <p
-                        class="
-                            mt-2
-                            text-3xl
-                            font-bold
-                            text-emerald-600
-                        "
-                    >
-                        {{ completedCount }}
+                    <p class="mt-3 text-3xl font-bold text-emerald-600">
+                        {{ completed }}
+                    </p>
+
+                    <p class="mt-2 text-xs text-emerald-700/70">
+                        Выполненные задания
                     </p>
                 </div>
             </section>
 
 
-            <!-- SEARCH + FILTERS -->
+            <!-- CONTROL PANEL -->
 
             <section
                 class="
                     mb-6
-                    rounded-2xl
+                    overflow-hidden
+                    rounded-3xl
                     border
-                    border-slate-200
-                    bg-white
-                    p-5
-                    shadow-sm
+                    border-slate-800
+                    bg-gradient-to-br
+                    from-[#0a1734]
+                    to-[#101f46]
+                    text-white
+                    shadow-xl
+                    shadow-slate-900/15
                 "
             >
-                <div class="relative">
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        class="
-                            absolute
-                            left-4
-                            top-1/2
-                            h-5
-                            w-5
-                            -translate-y-1/2
-                            text-slate-400
-                        "
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                    >
-                        <circle cx="11" cy="11" r="7" />
-                        <path
-                            stroke-linecap="round"
-                            d="m20 20-4-4"
-                        />
-                    </svg>
-
-                    <input
-                        v-model="search"
-                        type="text"
-                        placeholder="Поиск по клиенту или материалу"
-                        class="
-                            w-full
-                            rounded-xl
-                            border
-                            border-slate-200
-                            bg-slate-50
-                            py-3
-                            pl-12
-                            pr-4
-                            text-sm
-                            text-slate-800
-                            outline-none
-                            transition
-                            placeholder:text-slate-400
-                            focus:border-blue-400
-                            focus:bg-white
-                            focus:ring-4
-                            focus:ring-blue-50
-                        "
-                    >
-                </div>
-
                 <div
                     class="
-                        mt-4
                         flex
-                        flex-wrap
-                        gap-2
+                        flex-col
+                        gap-5
+                        border-b
+                        border-white/10
+                        p-5
+                        lg:flex-row
+                        lg:items-center
+                        lg:justify-between
                     "
                 >
-                    <button
-                        v-for="status in statuses"
-                        :key="status"
-                        @click="selectedStatus = status"
+                    <div>
+                        <p
+                            class="
+                                text-[11px]
+                                font-bold
+                                uppercase
+                                tracking-[0.18em]
+                                text-cyan-300
+                            "
+                        >
+                            Order control
+                        </p>
+
+                        <h2 class="mt-1 text-xl font-bold">
+                            Фильтрация производственного плана
+                        </h2>
+
+                        <p class="mt-1 text-xs text-blue-100/60">
+                            Быстрый поиск по заказчику, материалу или номеру заказа.
+                        </p>
+                    </div>
+
+                    <div
                         class="
-                            rounded-lg
-                            px-4
+                            flex
+                            items-center
+                            gap-2
+                            rounded-xl
+                            border
+                            border-white/10
+                            bg-white/[0.05]
+                            px-3
                             py-2
-                            text-sm
+                            text-xs
                             font-semibold
-                            transition
-                        "
-                        :class="
-                            selectedStatus === status
-                                ? 'bg-slate-900 text-white shadow-sm'
-                                : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                            text-blue-100
                         "
                     >
-                        {{ status }}
-                    </button>
+                        Найдено:
+                        <span class="text-base font-bold text-cyan-300">
+                            {{ filteredOrders.length }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="p-5">
+                    <div class="relative">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            class="
+                                absolute
+                                left-4
+                                top-1/2
+                                h-5
+                                w-5
+                                -translate-y-1/2
+                                text-blue-200/50
+                            "
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        >
+                            <circle cx="11" cy="11" r="7" />
+                            <path
+                                stroke-linecap="round"
+                                d="m20 20-3.5-3.5"
+                            />
+                        </svg>
+
+                        <input
+                            v-model="search"
+                            type="text"
+                            placeholder="Поиск по клиенту, материалу или ID заказа"
+                            class="
+                                w-full
+                                rounded-xl
+                                border
+                                border-white/10
+                                bg-white/[0.07]
+                                py-3.5
+                                pl-12
+                                pr-4
+                                text-sm
+                                font-medium
+                                text-white
+                                outline-none
+                                transition
+                                placeholder:text-blue-200/40
+                                focus:border-cyan-400/40
+                                focus:bg-white/[0.10]
+                                focus:ring-4
+                                focus:ring-cyan-400/10
+                            "
+                        >
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <button
+                            v-for="status in statuses"
+                            :key="status"
+                            @click="activeStatus = status"
+                            class="
+                                rounded-lg
+                                border
+                                px-4
+                                py-2.5
+                                text-xs
+                                font-bold
+                                transition
+                            "
+                            :class="
+                                activeStatus === status
+                                    ? 'border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                                    : 'border-white/10 bg-white/[0.04] text-blue-100/70 hover:bg-white/[0.08] hover:text-white'
+                            "
+                        >
+                            {{ status }}
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -463,35 +662,46 @@ function getStatusClasses(status) {
             <section
                 class="
                     overflow-hidden
-                    rounded-2xl
+                    rounded-3xl
                     border
-                    border-slate-200
+                    border-blue-200
                     bg-white
-                    shadow-sm
+                    shadow-xl
+                    shadow-blue-900/[0.05]
                 "
             >
                 <div
                     class="
                         flex
-                        items-center
+                        flex-col
                         justify-between
+                        gap-3
                         border-b
                         border-slate-100
-                        px-5
-                        py-4
+                        bg-gradient-to-r
+                        from-blue-50
+                        via-white
+                        to-cyan-50
+                        px-6
+                        py-5
+                        sm:flex-row
+                        sm:items-center
                     "
                 >
                     <div>
-                        <h2 class="font-bold text-slate-900">
-                            Список заказов
-                        </h2>
+                        <p class="font-bold text-slate-950">
+                            Рабочий список заказов
+                        </p>
 
                         <p class="mt-1 text-xs text-slate-500">
-                            Найдено: {{ filteredOrders.length }}
+                            Нажмите на строку или используйте действия справа.
                         </p>
                     </div>
-                </div>
 
+                    <p class="text-xs font-semibold text-slate-500">
+                        Показано {{ filteredOrders.length }} из {{ total }}
+                    </p>
+                </div>
 
                 <div
                     v-if="filteredOrders.length"
@@ -504,32 +714,31 @@ function getStatusClasses(status) {
                                     border-b
                                     border-slate-100
                                     bg-slate-50/80
+                                    text-left
                                 "
                             >
                                 <th
                                     class="
-                                        px-5
-                                        py-3
-                                        text-left
-                                        text-[11px]
-                                        font-semibold
+                                        px-6
+                                        py-3.5
+                                        text-[10px]
+                                        font-bold
                                         uppercase
-                                        tracking-wider
+                                        tracking-[0.12em]
                                         text-slate-400
                                     "
                                 >
-                                    Клиент
+                                    Заказ
                                 </th>
 
                                 <th
                                     class="
-                                        px-5
-                                        py-3
-                                        text-left
-                                        text-[11px]
-                                        font-semibold
+                                        px-4
+                                        py-3.5
+                                        text-[10px]
+                                        font-bold
                                         uppercase
-                                        tracking-wider
+                                        tracking-[0.12em]
                                         text-slate-400
                                     "
                                 >
@@ -538,28 +747,26 @@ function getStatusClasses(status) {
 
                                 <th
                                     class="
-                                        px-5
-                                        py-3
-                                        text-left
-                                        text-[11px]
-                                        font-semibold
+                                        px-4
+                                        py-3.5
+                                        text-[10px]
+                                        font-bold
                                         uppercase
-                                        tracking-wider
+                                        tracking-[0.12em]
                                         text-slate-400
                                     "
                                 >
-                                    Количество
+                                    Объём
                                 </th>
 
                                 <th
                                     class="
-                                        px-5
-                                        py-3
-                                        text-left
-                                        text-[11px]
-                                        font-semibold
+                                        px-4
+                                        py-3.5
+                                        text-[10px]
+                                        font-bold
                                         uppercase
-                                        tracking-wider
+                                        tracking-[0.12em]
                                         text-slate-400
                                     "
                                 >
@@ -568,13 +775,12 @@ function getStatusClasses(status) {
 
                                 <th
                                     class="
-                                        px-5
-                                        py-3
-                                        text-left
-                                        text-[11px]
-                                        font-semibold
+                                        px-4
+                                        py-3.5
+                                        text-[10px]
+                                        font-bold
                                         uppercase
-                                        tracking-wider
+                                        tracking-[0.12em]
                                         text-slate-400
                                     "
                                 >
@@ -583,13 +789,13 @@ function getStatusClasses(status) {
 
                                 <th
                                     class="
-                                        px-5
-                                        py-3
+                                        px-6
+                                        py-3.5
                                         text-right
-                                        text-[11px]
-                                        font-semibold
+                                        text-[10px]
+                                        font-bold
                                         uppercase
-                                        tracking-wider
+                                        tracking-[0.12em]
                                         text-slate-400
                                     "
                                 >
@@ -598,48 +804,50 @@ function getStatusClasses(status) {
                             </tr>
                         </thead>
 
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             <tr
                                 v-for="order in filteredOrders"
                                 :key="order.id"
+                                @click="openOrder(order.id)"
                                 class="
+                                    group
+                                    cursor-pointer
+                                    border-b
+                                    border-slate-100
                                     transition
-                                    hover:bg-slate-50/70
+                                    last:border-b-0
+                                    hover:bg-blue-50/70
                                 "
                             >
-                                <td
-                                    class="
-                                        whitespace-nowrap
-                                        px-5
-                                        py-4
-                                    "
-                                >
+                                <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div
                                             class="
                                                 flex
-                                                h-9
-                                                w-9
+                                                h-10
+                                                w-10
+                                                shrink-0
                                                 items-center
                                                 justify-center
-                                                rounded-lg
-                                                bg-slate-100
+                                                rounded-xl
+                                                border
+                                                border-blue-100
+                                                bg-blue-50
                                                 text-xs
                                                 font-bold
-                                                text-slate-600
+                                                text-blue-700
+                                                transition
+                                                group-hover:border-blue-200
+                                                group-hover:bg-blue-100
                                             "
                                         >
-                                            {{
-                                                order.customer_name
-                                                    ?.charAt(0)
-                                            }}
+                                            #{{ order.id }}
                                         </div>
 
                                         <div>
                                             <p
                                                 class="
-                                                    text-sm
-                                                    font-semibold
+                                                    font-bold
                                                     text-slate-900
                                                 "
                                             >
@@ -653,91 +861,72 @@ function getStatusClasses(status) {
                                                     text-slate-400
                                                 "
                                             >
-                                                ID #{{ order.id }}
+                                                Производственный заказ
                                             </p>
                                         </div>
                                     </div>
                                 </td>
 
-                                <td
-                                    class="
-                                        px-5
-                                        py-4
-                                        text-sm
-                                        text-slate-600
-                                    "
-                                >
-                                    {{ order.material }}
+                                <td class="px-4 py-4">
+                                    <p
+                                        class="
+                                            max-w-[260px]
+                                            truncate
+                                            text-sm
+                                            font-medium
+                                            text-slate-600
+                                        "
+                                    >
+                                        {{ order.material }}
+                                    </p>
                                 </td>
 
-                                <td
-                                    class="
-                                        whitespace-nowrap
-                                        px-5
-                                        py-4
-                                        text-sm
-                                        font-semibold
-                                        text-slate-800
-                                    "
-                                >
-                                    {{ formatQuantity(order.quantity) }}
+                                <td class="px-4 py-4">
+                                    <p class="text-sm font-bold text-slate-900">
+                                        {{ formatNumber(order.quantity) }}
+                                        <span class="font-medium text-slate-400">
+                                            ед.
+                                        </span>
+                                    </p>
                                 </td>
 
-                                <td
-                                    class="
-                                        whitespace-nowrap
-                                        px-5
-                                        py-4
-                                    "
-                                >
+                                <td class="px-4 py-4">
                                     <span
                                         class="
                                             inline-flex
+                                            items-center
+                                            gap-2
                                             rounded-full
-                                            px-2.5
-                                            py-1
+                                            border
+                                            px-3
+                                            py-1.5
                                             text-xs
-                                            font-semibold
-                                            ring-1
-                                            ring-inset
+                                            font-bold
                                         "
-                                        :class="
-                                            getStatusClasses(order.status)
-                                        "
+                                        :class="statusClasses(order.status)"
                                     >
+                                        <span
+                                            class="h-1.5 w-1.5 rounded-full"
+                                            :class="statusDot(order.status)"
+                                        ></span>
+
                                         {{ order.status }}
                                     </span>
                                 </td>
 
-                                <td
-                                    class="
-                                        whitespace-nowrap
-                                        px-5
-                                        py-4
-                                        text-sm
-                                        text-slate-500
-                                    "
-                                >
-                                    {{ formatDate(order.created_at) }}
+                                <td class="px-4 py-4">
+                                    <p class="text-xs font-medium text-slate-500">
+                                        {{ formatDate(order.created_at) }}
+                                    </p>
                                 </td>
 
                                 <td
-                                    class="
-                                        whitespace-nowrap
-                                        px-5
-                                        py-4
-                                    "
+                                    class="px-6 py-4"
+                                    @click.stop
                                 >
-                                    <div
-                                        class="
-                                            flex
-                                            items-center
-                                            justify-end
-                                            gap-1
-                                        "
-                                    >
+                                    <div class="flex justify-end gap-2">
                                         <button
-                                            @click="showOrder(order.id)"
+                                            @click="openOrder(order.id)"
                                             title="Открыть заказ"
                                             class="
                                                 flex
@@ -746,10 +935,14 @@ function getStatusClasses(status) {
                                                 items-center
                                                 justify-center
                                                 rounded-lg
+                                                border
+                                                border-slate-200
+                                                bg-white
                                                 text-slate-500
                                                 transition
+                                                hover:border-blue-200
                                                 hover:bg-blue-50
-                                                hover:text-blue-600
+                                                hover:text-blue-700
                                             "
                                         >
                                             <svg
@@ -764,11 +957,7 @@ function getStatusClasses(status) {
                                                     stroke-linejoin="round"
                                                     d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
                                                 />
-                                                <circle
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="2.5"
-                                                />
+                                                <circle cx="12" cy="12" r="2.5" />
                                             </svg>
                                         </button>
 
@@ -782,10 +971,14 @@ function getStatusClasses(status) {
                                                 items-center
                                                 justify-center
                                                 rounded-lg
+                                                border
+                                                border-slate-200
+                                                bg-white
                                                 text-slate-500
                                                 transition
+                                                hover:border-amber-200
                                                 hover:bg-amber-50
-                                                hover:text-amber-600
+                                                hover:text-amber-700
                                             "
                                         >
                                             <svg
@@ -798,13 +991,13 @@ function getStatusClasses(status) {
                                                 <path
                                                     stroke-linecap="round"
                                                     stroke-linejoin="round"
-                                                    d="m4 16-.8 4 4-.8L18 8.4 15.6 6 4 16Z"
+                                                    d="m4 20 4.5-1 10-10-3.5-3.5-10 10L4 20Z"
                                                 />
                                             </svg>
                                         </button>
 
                                         <button
-                                            @click="deleteOrder(order.id)"
+                                            @click="deleteOrder(order)"
                                             title="Удалить"
                                             class="
                                                 flex
@@ -813,8 +1006,12 @@ function getStatusClasses(status) {
                                                 items-center
                                                 justify-center
                                                 rounded-lg
+                                                border
+                                                border-slate-200
+                                                bg-white
                                                 text-slate-400
                                                 transition
+                                                hover:border-rose-200
                                                 hover:bg-rose-50
                                                 hover:text-rose-600
                                             "
@@ -829,7 +1026,7 @@ function getStatusClasses(status) {
                                                 <path
                                                     stroke-linecap="round"
                                                     stroke-linejoin="round"
-                                                    d="M4 7h16M10 11v6m4-6v6M9 7l1-2h4l1 2m-8 0 1 13h8l1-13"
+                                                    d="M5 7h14M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"
                                                 />
                                             </svg>
                                         </button>
@@ -840,65 +1037,55 @@ function getStatusClasses(status) {
                     </table>
                 </div>
 
-
                 <div
                     v-else
                     class="
+                        flex
+                        min-h-[260px]
+                        flex-col
+                        items-center
+                        justify-center
                         px-6
-                        py-16
+                        py-12
                         text-center
                     "
                 >
                     <div
                         class="
-                            mx-auto
                             flex
                             h-12
                             w-12
                             items-center
                             justify-center
-                            rounded-xl
-                            bg-slate-100
-                            text-slate-400
+                            rounded-2xl
+                            bg-blue-50
+                            text-blue-500
                         "
                     >
                         <svg
                             viewBox="0 0 24 24"
                             fill="none"
-                            class="h-5 w-5"
+                            class="h-6 w-6"
                             stroke="currentColor"
                             stroke-width="1.8"
                         >
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                d="M5 5h14v14H5zM8 9h8M8 13h5"
+                                d="M6 4h12v16H6zM9 8h6M9 12h6M9 16h4"
                             />
                         </svg>
                     </div>
 
-                    <h3
-                        class="
-                            mt-4
-                            font-semibold
-                            text-slate-800
-                        "
-                    >
+                    <p class="mt-4 font-bold text-slate-900">
                         Заказы не найдены
-                    </h3>
+                    </p>
 
-                    <p
-                        class="
-                            mt-1
-                            text-sm
-                            text-slate-500
-                        "
-                    >
-                        Попробуйте изменить запрос или фильтр.
+                    <p class="mt-1 max-w-sm text-sm text-slate-500">
+                        Измените поисковый запрос или выберите другой статус.
                     </p>
                 </div>
             </section>
-
         </main>
     </div>
 </template>

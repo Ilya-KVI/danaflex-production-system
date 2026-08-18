@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProductionLog;
 use App\Models\ProductionLine;
-use Illuminate\Http\Request;
+use App\Models\ProductionLog;
 
 class ProductionLineController extends Controller
 {
@@ -12,24 +11,36 @@ class ProductionLineController extends Controller
     {
         $line = ProductionLine::findOrFail($id);
 
+        if ($line->status === 'Работает') {
+            return back();
+        }
+
         $line->update([
             'status' => 'Работает',
             'temperature' => rand(38, 48),
             'load_percent' => rand(65, 95),
         ]);
 
-
         ProductionLog::create([
-            'message' => "🚀 {$line->name} запущена"
+            'message' => "{$line->name} запущена. "
+                . "Температура: {$line->temperature}°C, "
+                . "загрузка: {$line->load_percent}%.",
         ]);
-
 
         return back();
     }
 
+
     public function stop($id)
     {
         $line = ProductionLine::findOrFail($id);
+
+        if ($line->status === 'Остановлена') {
+            return back();
+        }
+
+        $previousTemperature = $line->temperature;
+        $previousLoad = $line->load_percent;
 
         $line->update([
             'status' => 'Остановлена',
@@ -37,11 +48,11 @@ class ProductionLineController extends Controller
             'load_percent' => 0,
         ]);
 
-
         ProductionLog::create([
-            'message' => "🛑 {$line->name} остановлена"
+            'message' => "{$line->name} остановлена. "
+                . "Перед остановкой: {$previousTemperature}°C, "
+                . "загрузка {$previousLoad}%.",
         ]);
-
 
         return back();
     }

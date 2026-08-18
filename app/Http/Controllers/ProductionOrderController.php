@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProductionLine;
+use App\Models\ProductionLog;
 use App\Models\ProductionOrder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -53,6 +54,27 @@ class ProductionOrderController extends Controller
             'status' => 'Новый',
         ]);
 
+        $lineName = null;
+
+        if ($order->production_line_id) {
+            $lineName = ProductionLine::find($order->production_line_id)?->name;
+        }
+
+        $message = "Создан заказ #{$order->id}: "
+            . "{$order->customer_name}, "
+            . "{$order->material}, "
+            . "{$order->quantity} ед.";
+
+        if ($lineName) {
+            $message .= " Линия: {$lineName}.";
+        } else {
+            $message .= " Линия не назначена.";
+        }
+
+        ProductionLog::create([
+            'message' => $message,
+        ]);
+
         return redirect()->route(
             'production-orders.show',
             $order->id
@@ -85,7 +107,46 @@ class ProductionOrderController extends Controller
             ],
         ]);
 
+        $changes = [];
+
+        if ($order->customer_name !== $validated['customer_name']) {
+            $changes[] = "заказчик: «{$order->customer_name}» → «{$validated['customer_name']}»";
+        }
+
+        if ($order->material !== $validated['material']) {
+            $changes[] = "материал: «{$order->material}» → «{$validated['material']}»";
+        }
+
+        if ((int) $order->quantity !== (int) $validated['quantity']) {
+            $changes[] = "объём: {$order->quantity} → {$validated['quantity']} ед.";
+        }
+
+        $newLineId = $validated['production_line_id'] ?? null;
+
+        if ((string) ($order->production_line_id ?? '') !== (string) ($newLineId ?? '')) {
+            $oldLineName = $order->production_line_id
+                ? ProductionLine::find($order->production_line_id)?->name
+                : null;
+
+            $newLineName = $newLineId
+                ? ProductionLine::find($newLineId)?->name
+                : null;
+
+            $changes[] = "линия: "
+                . ($oldLineName ?? 'не назначена')
+                . " → "
+                . ($newLineName ?? 'не назначена');
+        }
+
         $order->update($validated);
+
+        if ($changes) {
+            ProductionLog::create([
+                'message' => "Обновлён заказ #{$order->id}: "
+                    . implode('; ', $changes)
+                    . '.',
+            ]);
+        }
 
         return redirect()->route(
             'production-orders.show',
@@ -141,6 +202,10 @@ class ProductionOrderController extends Controller
                 ->get(),
 
             'lines' => ProductionLine::orderBy('name')->get(),
+
+            'logs' => ProductionLog::latest()
+                ->take(10)
+                ->get(),
         ]);
     }
 
@@ -160,8 +225,20 @@ class ProductionOrderController extends Controller
 
         $order = ProductionOrder::findOrFail($id);
 
+        $oldStatus = $order->status;
+        $newStatus = $validated['status'];
+
+        if ($oldStatus === $newStatus) {
+            return back();
+        }
+
         $order->update([
-            'status' => $validated['status'],
+            'status' => $newStatus,
+        ]);
+
+        ProductionLog::create([
+            'message' => "Заказ #{$order->id}: "
+                . "статус «{$oldStatus}» → «{$newStatus}».",
         ]);
 
         return back();
@@ -170,7 +247,14 @@ class ProductionOrderController extends Controller
 
     public function destroy($id)
     {
-        ProductionOrder::findOrFail($id)->delete();
+        $order = ProductionOrder::findOrFail($id);
+
+        ProductionLog::create([
+            'message' => "Удалён заказ #{$order->id}: "
+                . "{$order->customer_name}, {$order->material}.",
+        ]);
+
+        $order->delete();
 
         return redirect()->route(
             'production-orders.index'
